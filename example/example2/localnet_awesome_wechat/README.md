@@ -1,0 +1,8 @@
+这个版本是比较好的
+功能：
+server发出消息，所有的client接受消息
+各个client都能接受到消息，各个client都可以说话
+
+问题：
+各个client说话后，server接受到消息有时延
+server看不到是哪个client发送来的消息
