@@ -1,6 +1,6 @@
 #include<iostream>
 #include<stdio.h>
-using namespace std;
+// using namespace std;
 #include<cstdlib>
 #include <unistd.h>
 #include<cstring>
@@ -12,7 +12,9 @@ using namespace std;
 #include<unistd.h>
 #define BUFMAX 1024
 #define FILENAME "share.txt"
- 
+
+using std::cout;
+using std::endl;
 struct packet
 {
     int len;
