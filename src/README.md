@@ -35,3 +35,8 @@ bazel run src:server
 * 调整server中select成epoll
 * client做成继承的方式
 * 给线程起名字
+
+## TODO
+
+* client需要有各自的名字
+* client发送数据给server后，需要server端再广播出来（保存数据需要使用锁）
