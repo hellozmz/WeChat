@@ -29,3 +29,9 @@ bazel run src:server
 ```
 ./bazel-bin/src/client
 ```
+
+## 待优化
+
+* 调整server中select成epoll
+* client做成继承的方式
+* 给线程起名字

@@ -27,7 +27,8 @@
 
 * c++11
 * bazel
-* IOduolufuyong
+* IO多路复用
+* 多线程
 
 ## 运行环境
 
