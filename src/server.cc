@@ -16,7 +16,7 @@ using std::cin;
 using std::cout;
 using std::endl;
 
-std::mutex save_mutex;
+std::mutex data_mutex;
 
 // 监听注册的client socket
 void AcceptSocket(int skt, struct sockaddr_in s_addr, socklen_t saddr_len,
@@ -36,10 +36,9 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
     tv.tv_usec = 0;
     while(true) {
         for (auto i : socket_list) {
-            // fd_set是select进行IO多路复用的数据空间
-            fd_set rfds;    
+            fd_set rfds;        // select监听的IO多路复用的数据空间
             FD_ZERO(&rfds);
-            int maxfd = 0;
+            int maxfd = 0;      // select监听的文件句柄的上限数
             FD_SET(i, &rfds);
             if(maxfd < i){
                 maxfd = i;
@@ -56,10 +55,9 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
                 memset(buf, 0, MESSAGE_LEN);
                 int len = recv(i, buf, MESSAGE_LEN, 0);
                 cout << "recv message len=" << strlen(buf) << ", clientid=" << i << ", message=" << buf << endl;
-                // {
-                //     std::unique_lock<std::mutex> l(save_mutex);
-                //     data(buf);
-                // }            
+                // std::lock_guard<std::mutex> lck(data_mutex);
+                // data.assign(buf);
+                // cout << "RecvData data=" << data << endl;
             }
         }
         sleep(1);
@@ -71,11 +69,16 @@ void SendData(std::list<int>& socket_list, std::string& data) {
     while(true) {
         char buf[MESSAGE_LEN];
         // {
-        //     std::unique_lock<std::mutex> l(save_mutex);
-        //     buf = data.c_str();
-        // }
-        // if (sizeof(buf) == 0) {
-        //     cin >> buf;
+        //     std::lock_guard<std::mutex> lck(data_mutex);
+        //     cout << "SendData data=" << data << endl;
+        //     for (int i=0; i<data.size(); ++i) {
+        //         buf[i] = data[i];
+        //     }
+        //     buf[data.size()] = '\0';
+        //     if (data.size() == 0) {
+        //         cin >> buf;
+        //     }
+        //     data = "";
         // }
         cin >> buf;
         for(auto i : socket_list){
@@ -112,7 +115,7 @@ int main() {
 
     // accept
     std::list<int> socket_list;
-    std::string data;
+    std::string data;       // 线程之间同步数据
     std::thread accept_socket(AcceptSocket, fd, std::ref(serv_addr), saddr_len, std::ref(socket_list));
     accept_socket.detach();
     cout << "accept done" << endl;
