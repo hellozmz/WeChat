@@ -60,7 +60,7 @@ int main() {
             if (FD_ISSET(fd, &rfds)) {
                 char buf[MESSAGE_LEN];
                 int len = recv(fd, buf, MESSAGE_LEN, 0);
-                cout << "recv data: " << buf << ", len=" << len << endl;
+                cout << "recv data len=" << strlen(buf) << ", clientid=" << fd << ", message=" << buf << endl;
                 memset(buf, 0, MESSAGE_LEN);
             }
             // send, 删除socket标记

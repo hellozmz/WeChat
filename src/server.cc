@@ -55,7 +55,7 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
                 char buf[MESSAGE_LEN];
                 memset(buf, 0, MESSAGE_LEN);
                 int len = recv(i, buf, MESSAGE_LEN, 0);
-                cout << "recv message: " << buf << ", len=" << len << endl;
+                cout << "recv message len=" << strlen(buf) << ", clientid=" << i << ", message=" << buf << endl;
                 // {
                 //     std::unique_lock<std::mutex> l(save_mutex);
                 //     data(buf);
