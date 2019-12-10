@@ -36,7 +36,13 @@ bazel run src:server
 * client做成继承的方式
 * 给线程起名字
 
+## 现有功能
+
+* server->all client
+* client->server
+
 ## TODO
 
 * client需要有各自的名字
 * client发送数据给server后，需要server端再广播出来（保存数据需要使用锁）
+* server端断开后，client端不能刷大量log
