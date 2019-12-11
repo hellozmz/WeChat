@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include <cstring>
 #include <iostream>
 #include <list>
 #include <mutex>
@@ -55,9 +56,11 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
                 memset(buf, 0, MESSAGE_LEN);
                 int len = recv(i, buf, MESSAGE_LEN, 0);
                 cout << "recv message len=" << strlen(buf) << ", clientid=" << i << ", message=" << buf << endl;
-                // std::lock_guard<std::mutex> lck(data_mutex);
-                // data.assign(buf);
-                // cout << "RecvData data=" << data << endl;
+                // {
+                //     std::lock_guard<std::mutex> lck(data_mutex);
+                //     data.assign(buf);
+                //     cout << "RecvData data=" << data << endl;
+                // }
             }
         }
         sleep(1);
@@ -75,16 +78,57 @@ void SendData(std::list<int>& socket_list, std::string& data) {
         //         buf[i] = data[i];
         //     }
         //     buf[data.size()] = '\0';
-        //     if (data.size() == 0) {
-        //         cin >> buf;
-        //     }
-        //     data = "";
         // }
+        // if (data.size() == 0) {
+        //     cin >> buf;
+        // }
+        // data = "";
         cin >> buf;
         for(auto i : socket_list){
             send(i, buf, MESSAGE_LEN, 0);
         }
         memset(buf, 0, MESSAGE_LEN);
+    }
+}
+
+// server
+void Server(std::list<int>& socket_list) {
+    struct timeval tv;
+    tv.tv_sec = 2;
+    tv.tv_usec = 0;
+    while(true) {
+        for (auto i : socket_list) {
+            fd_set rfds;        // select监听的IO多路复用的数据空间
+            FD_ZERO(&rfds);
+            int maxfd = 0;      // select监听的文件句柄的上限数
+            FD_SET(i, &rfds);
+            if(maxfd < i){
+                maxfd = i;
+            }
+            int rtn = select(maxfd+1, &rfds, NULL, NULL, &tv);
+            if (rtn == -1) {
+                cout << "select error." << endl;
+            } else if (rtn == 0) {
+                // OK
+                // cout << "select OK." << endl;
+            } else {
+                // recv
+                char send_msg[MESSAGE_LEN];
+                char recv_msg[MESSAGE_LEN];
+                memset(send_msg, 0, MESSAGE_LEN);
+                memset(recv_msg, 0, MESSAGE_LEN);
+                int len = recv(i, recv_msg, MESSAGE_LEN, 0);
+                cout << "recv message len=" << strlen(recv_msg) << ", clientid=" << i << ", message=" << recv_msg << endl;
+
+                for(auto j : socket_list){
+                    if (i != j) {
+                        strcpy(send_msg, ("user " + std::to_string(i) + ": " + std::string(recv_msg)).c_str());
+                        send(j, send_msg, MESSAGE_LEN, 0);
+                    }
+                }
+            }
+        }
+        sleep(1);
     }
 }
 
@@ -120,15 +164,19 @@ int main() {
     accept_socket.detach();
     cout << "accept done" << endl;
 
-    // recv
-    std::thread recv_data(RecvData, std::ref(socket_list), std::ref(data));
-    recv_data.detach();
-    cout << "recv done" << endl;
+    // // recv
+    // std::thread recv_data(RecvData, std::ref(socket_list), std::ref(data));
+    // recv_data.detach();
+    // cout << "recv done" << endl;
 
-    // send
-    std::thread send_data(SendData, std::ref(socket_list), std::ref(data));
-    send_data.detach();
-    cout << "send done" << endl;
+    // // send
+    // std::thread send_data(SendData, std::ref(socket_list), std::ref(data));
+    // send_data.detach();
+    // cout << "send done" << endl;
+
+    // server
+    std::thread server(Server, std::ref(socket_list));
+    server.detach();
 
     while(true) {
         // sleep(1);
