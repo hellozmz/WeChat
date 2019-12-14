@@ -7,12 +7,10 @@
 
 #include <iostream>
 
+#include "config/config.h"
 #include "src/user/admin.h"
 #include "src/user/normal_user.h"
 
-#define IP "127.0.0.1"
-#define PORT 9977
-#define MESSAGE_LEN 1024
 
 using std::cin;
 using std::cout;
@@ -37,7 +35,7 @@ User* User::CreateUser(std::string type, std::string name) {
 }
 
 void User::Chat() {
-    // TODO(hellozmz): impl
+    // TODO(hellozmz): implement
 
     cout << "client is running..." << endl;
 

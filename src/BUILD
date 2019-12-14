@@ -9,4 +9,7 @@ cc_binary(
 cc_binary(
     name = "server",
     srcs = ["server.cc"],
+    deps = [
+        "//config:config",
+    ],
 )

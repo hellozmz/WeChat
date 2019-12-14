@@ -3,15 +3,14 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include <chrono>
 #include <cstring>
 #include <iostream>
 #include <list>
 #include <mutex>
 #include <thread>
 
-#define IP "127.0.0.1"
-#define PORT 9977
-#define MESSAGE_LEN 1024
+#include "config/config.h"
 
 using std::cin;
 using std::cout;
@@ -32,9 +31,7 @@ void AcceptSocket(int skt, struct sockaddr_in s_addr, socklen_t saddr_len,
 
 // IO多路复用
 void RecvData(std::list<int>& socket_list, std::string& data) {
-    struct timeval tv;
-    tv.tv_sec = 2;
-    tv.tv_usec = 0;
+    struct timeval timeout;
     while(true) {
         for (auto i : socket_list) {
             fd_set rfds;        // select监听的IO多路复用的数据空间
@@ -44,7 +41,11 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
             if(maxfd < i){
                 maxfd = i;
             }
-            int rtn = select(maxfd+1, &rfds, NULL, NULL, &tv);
+            // select调用完后，timeout的值可能被修改，是一个不确定的值，所以cpu可能飙升到100%
+            // 所以需要在while循环内部每次都赋值一遍
+            timeout.tv_sec = 2;
+            timeout.tv_usec = 0;
+            int rtn = select(maxfd+1, &rfds, NULL, NULL, &timeout);
             if (rtn == -1) {
                 cout << "select error." << endl;
             } else if (rtn == 0) {
@@ -63,7 +64,8 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
                 // }
             }
         }
-        sleep(1);
+        // sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -93,9 +95,7 @@ void SendData(std::list<int>& socket_list, std::string& data) {
 
 // server
 void Server(std::list<int>& socket_list) {
-    struct timeval tv;
-    tv.tv_sec = 2;
-    tv.tv_usec = 0;
+    struct timeval timeout;
     while(true) {
         for (auto i : socket_list) {
             fd_set rfds;        // select监听的IO多路复用的数据空间
@@ -105,7 +105,11 @@ void Server(std::list<int>& socket_list) {
             if(maxfd < i){
                 maxfd = i;
             }
-            int rtn = select(maxfd+1, &rfds, NULL, NULL, &tv);
+            // select调用完后，timeout的值可能被修改，是一个不确定的值，所以cpu可能飙升到100%
+            // 所以需要在while循环内部每次都赋值一遍
+            timeout.tv_sec = 2;
+            timeout.tv_usec = 0;
+            int rtn = select(maxfd+1, &rfds, NULL, NULL, &timeout);
             if (rtn == -1) {
                 cout << "select error." << endl;
             } else if (rtn == 0) {
@@ -128,7 +132,8 @@ void Server(std::list<int>& socket_list) {
                 }
             }
         }
-        sleep(1);
+        // sleep(1);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -176,11 +181,9 @@ int main() {
 
     // server
     std::thread server(Server, std::ref(socket_list));
-    server.detach();
+    server.join();
 
-    while(true) {
-        // sleep(1);
-    }
+    // TODO: 可以接受命令行指令，执行查看等操作
 
     return 0;
 }

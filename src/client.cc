@@ -21,7 +21,11 @@ int main() {
     cout << "请输入用户名，按回车结束输入" << endl;
     cin >> name;
     User* user = wechat::User::CreateUser(type, name);
-    user->Chat();
+    if (user) {
+        user->Chat();
+    } else {
+        cout << "登陆失败，请重试。";
+    }
     delete user;
     user = nullptr;
     return 0;

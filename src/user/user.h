@@ -27,7 +27,7 @@ class User {
                 cout << "欢迎管理员登陆系统！" << endl;
                 is_admin_ = true;
             } else {
-                cout << "用户你好，欢迎登陆！" << endl;
+                cout << "用户\"" << name_ << "\"你好，欢迎登陆聊天室！" << endl;
             }
         }
         return true;
@@ -41,7 +41,7 @@ class User {
     virtual void SayHello();
 
  private:
-    std::string name_;
+    const std::string name_;
     bool is_admin_;
     const std::string admin_password_ = "1001";
 };
