@@ -5,7 +5,9 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #include "config/config.h"
 #include "src/user/admin.h"
@@ -59,6 +61,7 @@ void User::Chat() {
     fd_set rfds;
     int maxfd = 0;
     struct timeval tv;
+    int retry_time = 3;
     while(true) {
         FD_ZERO(&rfds);
         FD_SET(0, &rfds);
@@ -71,33 +74,38 @@ void User::Chat() {
         tv.tv_sec = 5;
         tv.tv_usec = 0;
         int rtn = select(maxfd+1, &rfds, NULL, NULL, &tv);
-        if (rtn == -1) {
-            cout << "select error." << endl;
+        if (rtn < 0) {
+            cout << "select error, error code=" << rtn << endl;
             break;
         } else if (rtn == 0) {
-            // OK
-            // cout << "select OK." << endl;
+            // 等待超时
             continue;
         } else {
             // recv, 获取socket标记
             if (FD_ISSET(fd, &rfds)) {
                 char buf[MESSAGE_LEN];
                 int len = recv(fd, buf, MESSAGE_LEN, 0);
-                // cout << "recv data len=" << strlen(buf) << ", clientid=" << fd << ", message=" << buf << endl;
+                if (len == 0) {
+                    cout << "server端不在线，请检查，5秒后重试，再重试"<< retry_time-- << "次后退出。" << endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                    if (retry_time == 0) {
+                        // close(fd);
+                        break;
+                    }
+                }
                 cout << buf;
                 memset(buf, 0, MESSAGE_LEN);
             }
-            // send, 删除socket标记
+            // send, 并删除socket标记
             if (FD_ISSET(0, &rfds)) {
                 char buf[MESSAGE_LEN];
-                // cin >> buf;
                 fgets(buf, MESSAGE_LEN, stdin);
                 send(fd, buf, strlen(buf), 0);
                 memset(buf, 0, MESSAGE_LEN);
             }
         }
-        // sleep(1);
     }
+    cout << "退出聊天室" << endl;
     close(fd);
 }
 

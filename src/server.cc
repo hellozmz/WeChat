@@ -25,8 +25,8 @@ void AcceptSocket(int skt, struct sockaddr_in s_addr, socklen_t saddr_len,
         int fd = accept(skt, (sockaddr*)&s_addr, &saddr_len);
         cout << fd << " is linked." << endl;
         socket_list.push_back(fd);
-        // sleep(1);
-    }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));    }
 }
 
 // IO多路复用
@@ -57,14 +57,8 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
                 memset(buf, 0, MESSAGE_LEN);
                 int len = recv(i, buf, MESSAGE_LEN, 0);
                 cout << "recv message len=" << strlen(buf) << ", clientid=" << i << ", message=" << buf << endl;
-                // {
-                //     std::lock_guard<std::mutex> lck(data_mutex);
-                //     data.assign(buf);
-                //     cout << "RecvData data=" << data << endl;
-                // }
             }
         }
-        // sleep(1);
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
@@ -73,18 +67,6 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
 void SendData(std::list<int>& socket_list, std::string& data) {
     while(true) {
         char buf[MESSAGE_LEN];
-        // {
-        //     std::lock_guard<std::mutex> lck(data_mutex);
-        //     cout << "SendData data=" << data << endl;
-        //     for (int i=0; i<data.size(); ++i) {
-        //         buf[i] = data[i];
-        //     }
-        //     buf[data.size()] = '\0';
-        // }
-        // if (data.size() == 0) {
-        //     cin >> buf;
-        // }
-        // data = "";
         cin >> buf;
         for(auto i : socket_list){
             send(i, buf, MESSAGE_LEN, 0);
@@ -132,7 +114,6 @@ void Server(std::list<int>& socket_list) {
                 }
             }
         }
-        // sleep(1);
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
@@ -168,16 +149,6 @@ int main() {
     std::thread accept_socket(AcceptSocket, fd, std::ref(serv_addr), saddr_len, std::ref(socket_list));
     accept_socket.detach();
     cout << "accept done" << endl;
-
-    // // recv
-    // std::thread recv_data(RecvData, std::ref(socket_list), std::ref(data));
-    // recv_data.detach();
-    // cout << "recv done" << endl;
-
-    // // send
-    // std::thread send_data(SendData, std::ref(socket_list), std::ref(data));
-    // send_data.detach();
-    // cout << "send done" << endl;
 
     // server
     std::thread server(Server, std::ref(socket_list));
