@@ -1,3 +1,4 @@
 bazel-*
 .vscode/
 share.txt
+log*
