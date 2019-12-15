@@ -2,19 +2,28 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <stdarg.h>
+#include <sys/stat.h>
 
 #include <chrono>
 #include <cstring>
 #include <iostream>
 #include <list>
+#include <map>
 #include <mutex>
+#include <string>
 #include <thread>
 
 #include "config/config.h"
+#include "util/glog_util.h"
+
+#include "glog/logging.h"
 
 using std::cin;
 using std::cout;
 using std::endl;
+
+using UserDatabase = std::map<int, std::string>;
 
 std::mutex data_mutex;
 
@@ -46,17 +55,20 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
             timeout.tv_sec = 2;
             timeout.tv_usec = 0;
             int rtn = select(maxfd+1, &rfds, NULL, NULL, &timeout);
-            if (rtn == -1) {
+            if (rtn < 0) {
                 cout << "select error." << endl;
             } else if (rtn == 0) {
-                // OK
+                // 连接超时
                 // cout << "select OK." << endl;
             } else {
                 // recv
                 char buf[MESSAGE_LEN];
                 memset(buf, 0, MESSAGE_LEN);
                 int len = recv(i, buf, MESSAGE_LEN, 0);
-                cout << "recv message len=" << strlen(buf) << ", clientid=" << i << ", message=" << buf << endl;
+                if (len != 0) {         // 没有客户端连接的时候，不要打印数据
+                    cout << "recv message len=" << strlen(buf)
+                         << ", clientid=" << i << ", message=" << buf << endl;
+                }
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -77,6 +89,7 @@ void SendData(std::list<int>& socket_list, std::string& data) {
 
 // server
 void Server(std::list<int>& socket_list) {
+    LOG(ERROR) << "Server Running...";
     struct timeval timeout;
     while(true) {
         for (auto i : socket_list) {
@@ -92,10 +105,12 @@ void Server(std::list<int>& socket_list) {
             timeout.tv_sec = 2;
             timeout.tv_usec = 0;
             int rtn = select(maxfd+1, &rfds, NULL, NULL, &timeout);
-            if (rtn == -1) {
+            if (rtn < 0) {
+                LOG(ERROR) << "select error.";
                 cout << "select error." << endl;
             } else if (rtn == 0) {
-                // OK
+                // 连接超时
+                // LOG(ERROR) << "select overtime, continue";
                 // cout << "select OK." << endl;
             } else {
                 // recv
@@ -104,7 +119,28 @@ void Server(std::list<int>& socket_list) {
                 memset(send_msg, 0, MESSAGE_LEN);
                 memset(recv_msg, 0, MESSAGE_LEN);
                 int len = recv(i, recv_msg, MESSAGE_LEN, 0);
-                cout << "recv message len=" << strlen(recv_msg) << ", clientid=" << i << ", message=" << recv_msg << endl;
+                if (len != 0) {         // 没有客户端连接的时候，不要打印数据
+                    LOG(INFO) << "recv message len=" << strlen(recv_msg) << ", clientid=" << i
+                         << ", message=" << recv_msg;
+                }
+                std::string recv_msg_str(recv_msg);
+                std::string name_prefix(SEND_NAME_PREFIX);
+                if (recv_msg_str.size() > name_prefix.size()) {
+                    bool is_name = false;
+                    for (int i=0; i<name_prefix.size(); ++i) {
+                        if (recv_msg_str[i] == name_prefix[i]) {
+                            is_name = true;
+                            continue;
+                        } else {
+                            is_name = false;
+                            break;
+                        }
+                    }
+                    if (is_name) {
+                        std::string name = recv_msg_str.substr(name_prefix.size());
+                        LOG(ERROR) << "name=" << name;
+                    }
+                }
 
                 for(auto j : socket_list){
                     if (i != j) {
@@ -114,15 +150,25 @@ void Server(std::list<int>& socket_list) {
                 }
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
 int main() {
-    cout << "server is running..." << endl;
+    std::string workspace_name = "wechat_server";
+    wechat::GlogUtil::init_glog(workspace_name);
+    LOG(ERROR) << "wechat is running...";
 
     // socket
     int fd = socket(AF_INET, SOCK_STREAM, 0);
+    int reuse = 0;
+#ifdef debug_wechat
+    reuse = 1;
+    cout << __FILE__ << "," << __LINE__ << " debug" << endl;
+    LOG(ERROR) << "debug_wechat mode.";
+#endif
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
     serv_addr.sin_family = AF_INET;
@@ -135,6 +181,7 @@ int main() {
         perror("bind error.");
         exit(1);
     }
+    LOG(ERROR) << "bind success.";
 
     // listen
     int listen_queue = 20;  // need less than 30
@@ -142,19 +189,26 @@ int main() {
         perror("listen error.");
         exit(1);
     }
+    LOG(ERROR) << "listen success.";
 
     // accept
     std::list<int> socket_list;
+    std::map<int, std::string> user_database;       // 使用fd作为唯一主键，名字是值
     std::string data;       // 线程之间同步数据
     std::thread accept_socket(AcceptSocket, fd, std::ref(serv_addr), saddr_len, std::ref(socket_list));
     accept_socket.detach();
-    cout << "accept done" << endl;
+    LOG(ERROR) << "accept socket thread detached.";
 
     // server
     std::thread server(Server, std::ref(socket_list));
-    server.join();
+    server.detach();
+    LOG(ERROR) << "server thread detached.";
 
     // TODO: 可以接受命令行指令，执行查看等操作
+    while (true) {
+        LOG(ERROR) << "server while true...";
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000*100));
+    }
 
     return 0;
 }
