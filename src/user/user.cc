@@ -5,11 +5,15 @@
 #include <unistd.h>
 #include <sys/socket.h>
 
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 #include "config/config.h"
 #include "src/user/admin.h"
 #include "src/user/normal_user.h"
+
+#include "glog/logging.h"
 
 
 using std::cin;
@@ -34,13 +38,16 @@ User* User::CreateUser(std::string type, std::string name) {
     return user;
 }
 
-void User::Chat() {
-    // TODO(hellozmz): implement
-
-    cout << "client is running..." << endl;
+void User::JoinChatRoom() {
+    cout << "欢迎加入聊天室！" << endl;
 
     // socket
     int fd = socket(AF_INET, SOCK_STREAM, 0);
+    int reuse = 0;
+#ifdef debug_wechat
+    reuse = 1;
+#endif
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
     struct sockaddr_in serv_addr;
     memset(&serv_addr, 0, sizeof(serv_addr));
@@ -54,11 +61,13 @@ void User::Chat() {
         perror("connect error.");
         exit(1);
     }
-
+    LOG(ERROR) << "connect successful.";
     // recv && send
     fd_set rfds;
     int maxfd = 0;
     struct timeval tv;
+    int retry_time = 3;
+
     while(true) {
         FD_ZERO(&rfds);
         FD_SET(0, &rfds);
@@ -70,39 +79,73 @@ void User::Chat() {
 
         tv.tv_sec = 5;
         tv.tv_usec = 0;
+
         int rtn = select(maxfd+1, &rfds, NULL, NULL, &tv);
-        if (rtn == -1) {
-            cout << "select error." << endl;
+
+        if (rtn < 0) {
+            LOG(ERROR) << "select error, error code=" << rtn;
             break;
         } else if (rtn == 0) {
-            // OK
-            // cout << "select OK." << endl;
+            // 等待超时
+            // LOG(ERROR) << "client wait overtime.";
             continue;
         } else {
-            // recv, 获取socket标记
-            if (FD_ISSET(fd, &rfds)) {
-                char buf[MESSAGE_LEN];
-                int len = recv(fd, buf, MESSAGE_LEN, 0);
-                // cout << "recv data len=" << strlen(buf) << ", clientid=" << fd << ", message=" << buf << endl;
-                cout << buf;
-                memset(buf, 0, MESSAGE_LEN);
-            }
-            // send, 删除socket标记
+            // send, 并删除socket标记
             if (FD_ISSET(0, &rfds)) {
                 char buf[MESSAGE_LEN];
-                // cin >> buf;
                 fgets(buf, MESSAGE_LEN, stdin);
                 send(fd, buf, strlen(buf), 0);
                 memset(buf, 0, MESSAGE_LEN);
             }
+
+            // recv, 获取socket标记
+            if (FD_ISSET(fd, &rfds)) {
+                // if (firsttime_signin) {
+                //     char buf[MESSAGE_LEN];
+                //     // 第一次登陆，将名字发送给server
+                //     SendName(buf, MESSAGE_LEN);
+                //     std::string name(buf);
+                //     cout << "send name = " << name << endl;
+                //     firsttime_signin = false;
+                //     send(fd, buf, strlen(buf), 0);
+                //     memset(buf, 0, MESSAGE_LEN);
+                // }
+
+                char buf[MESSAGE_LEN];
+                int len = recv(fd, buf, MESSAGE_LEN, 0);
+                if (len == 0) {
+                    cout << "server端不在线，请检查，5秒后重试，再重试"<< retry_time-- << "次后退出。" << endl;
+                    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+                    if (retry_time == 0) {
+                        // close(fd);
+                        break;
+                    }
+                }
+                cout << buf;
+                memset(buf, 0, MESSAGE_LEN);
+            }
         }
-        // sleep(1);
     }
+    cout << "退出聊天室" << endl;
     close(fd);
 }
 
 void User::SayHello() {
     cout << "欢迎登陆聊天室。" << endl;
+}
+
+bool User::SendName(char* buffer, int length) {
+    std::string send_username = SEND_NAME_PREFIX + GetUserName();
+    if (send_username.size() + sizeof(SEND_NAME_PREFIX) >= length) {
+        send_username = SEND_NAME_PREFIX;
+        send_username += "abc";
+        return false;
+    }
+    for (int i=0; i<send_username.size(); ++i) {
+        buffer[i] = send_username[i];
+    }
+    buffer[send_username.size()] = '\0';
+    return true;
 }
 
 } // namespace wechat

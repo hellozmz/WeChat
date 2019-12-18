@@ -15,6 +15,12 @@ bazel build //src:server
 bazel build //src:client
 ```
 
+## debug
+
+socket断开连接后有一个TIME_WAIT阶段，对于调试很不方便，需要不断的等待。可以在编译的时候添加参数`--copt -Ddebug_wechat=1`来解决。注意，使用参数编译后，启动二进制要使用`./bazel-bin/src/{server, client}`，不可以使用`bazel run src:{server, client}`，因为这样会重新编译，没有加进去编译参数。
+
+已经支持glog，可以通过log进行调试。
+
 ## 启动命令
 
 * server端
@@ -33,10 +39,11 @@ bazel run src:server
 ## 待优化
 
 * 调整server中select成epoll
-* client做成继承的方式
 * 给线程起名字
 * 使用mysql去存储数据
 * 做成docker image，便于别人部署
+* 客户端都退出后，服务端自己也会退出
+* 当使用中文聊天，删除两次才会去掉一个中文字符，但是这就删除掉了两个中文字符。
 
 ## 现有功能
 
