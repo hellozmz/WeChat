@@ -48,6 +48,18 @@
 * bazel 0.17.2
 * g++ 4.8.5
 
+## docker
+
+* 制作镜像
+
+`docker build -t wechat:test .`
+
+* 运行镜像
+
+`docker start wechat:test`
+`docker run -it wechat:test /bin/bash`
+`docker exec -it {ID} /bin/bash`
+
 ## 开发进度
 
 Time | 工作内容 | 备注
