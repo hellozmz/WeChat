@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+// #include <boost/algorithm/string.hpp>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -27,6 +28,11 @@ using UserDatabase = std::map<int, std::string>;
 
 std::mutex data_mutex;
 
+struct UserDB {
+    int fd;
+    std::string user_name;
+};
+
 // 监听注册的client socket
 void AcceptSocket(int skt, struct sockaddr_in s_addr, socklen_t saddr_len,
                   std::list<int>& socket_list) {
@@ -35,7 +41,8 @@ void AcceptSocket(int skt, struct sockaddr_in s_addr, socklen_t saddr_len,
         cout << fd << " is linked." << endl;
         socket_list.push_back(fd);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));    }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
 }
 
 // IO多路复用
@@ -90,6 +97,7 @@ void SendData(std::list<int>& socket_list, std::string& data) {
 // server
 void Server(std::list<int>& socket_list) {
     LOG(ERROR) << "Server Running...";
+    std::map<int, std::string> user_db;      // 用户数据库
     struct timeval timeout;
     while(true) {
         for (auto i : socket_list) {
@@ -125,6 +133,7 @@ void Server(std::list<int>& socket_list) {
                 }
                 std::string recv_msg_str(recv_msg);
                 std::string name_prefix(SEND_NAME_PREFIX);
+                cout << "recv_msg=" << recv_msg_str << endl;
                 if (recv_msg_str.size() > name_prefix.size()) {
                     bool is_name = false;
                     for (int i=0; i<name_prefix.size(); ++i) {
@@ -136,15 +145,29 @@ void Server(std::list<int>& socket_list) {
                             break;
                         }
                     }
+                    // if (boost::starts_with(recv_msg_str, name_prefix)) {
+                    //     cout << "begin with name_prefix" << endl;
+                    // } else {
+                    //     cout << "not begin with name_prefix" << endl;
+                    // }
+                    cout << std::boolalpha << "is_name=" << is_name << endl;
                     if (is_name) {
+                        LOG(ERROR) << "origin name=" << recv_msg_str;
                         std::string name = recv_msg_str.substr(name_prefix.size());
                         LOG(ERROR) << "name=" << name;
+                        cout << "name=" << name << endl;
+                        if (user_db.find(i) != user_db.end()) {
+                            // find user
+                        } else {
+                            user_db.insert(std::pair<int, std::string>(i, name));
+                        }
                     }
                 }
 
                 for(auto j : socket_list){
+                    std::string name = user_db[i];
                     if (i != j) {
-                        strcpy(send_msg, ("user " + std::to_string(i) + ": " + std::string(recv_msg)).c_str());
+                        strcpy(send_msg, ("user " + name + ": " + std::string(recv_msg)).c_str());
                         send(j, send_msg, MESSAGE_LEN, 0);
                     }
                 }

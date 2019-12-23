@@ -15,5 +15,6 @@ cc_binary(
         "@com_github_google_glog//:glog",
         "//config:config",
         "//util:util",
+        # "@boost//:algorithm",
     ],
 )

@@ -62,6 +62,17 @@ void User::JoinChatRoom() {
         exit(1);
     }
     LOG(ERROR) << "connect successful.";
+
+    // 第一次接入后，发送名字
+    {
+        char tmp_buf[MESSAGE_LEN];
+        SendName(tmp_buf, MESSAGE_LEN);
+        std::string name(tmp_buf);
+        cout << "send name = " << name << endl;
+        send(fd, tmp_buf, strlen(tmp_buf), 0);
+        memset(tmp_buf, 0, MESSAGE_LEN);
+    }
+
     // recv && send
     fd_set rfds;
     int maxfd = 0;
