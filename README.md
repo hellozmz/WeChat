@@ -29,6 +29,7 @@
 * 完善的启动脚本
 * 聊天记录存储在数据库中(todo)
 * 系统封装成docker image
+* 为了便于编译，将bazel cache打包到docker image里
 
 ## 技术栈
 
@@ -43,6 +44,8 @@
 * Centos 7
 * bazel 0.17.2
 * g++ 4.8.5
+* git 2.2.1
+* boost 1.68.0
 
 ## docker常用命令
 

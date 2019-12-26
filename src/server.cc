@@ -1,5 +1,6 @@
+#include <boost/algorithm/string.hpp>
+
 #include <arpa/inet.h>
-// #include <boost/algorithm/string.hpp>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -136,20 +137,20 @@ void Server(std::list<int>& socket_list) {
                 cout << "recv_msg=" << recv_msg_str << endl;
                 if (recv_msg_str.size() > name_prefix.size()) {
                     bool is_name = false;
-                    for (int i=0; i<name_prefix.size(); ++i) {
-                        if (recv_msg_str[i] == name_prefix[i]) {
-                            is_name = true;
-                            continue;
-                        } else {
-                            is_name = false;
-                            break;
-                        }
-                    }
-                    // if (boost::starts_with(recv_msg_str, name_prefix)) {
-                    //     cout << "begin with name_prefix" << endl;
-                    // } else {
-                    //     cout << "not begin with name_prefix" << endl;
+                    // for (int i=0; i<name_prefix.size(); ++i) {
+                    //     if (recv_msg_str[i] == name_prefix[i]) {
+                    //         is_name = true;
+                    //         continue;
+                    //     } else {
+                    //         is_name = false;
+                    //         break;
+                    //     }
                     // }
+                    if (boost::starts_with(recv_msg_str, name_prefix)) {
+                        is_name = true;
+                    } else {
+                        is_name = false;
+                    }
                     cout << std::boolalpha << "is_name=" << is_name << endl;
                     if (is_name) {
                         LOG(ERROR) << "origin name=" << recv_msg_str;
