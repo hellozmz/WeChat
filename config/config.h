@@ -3,3 +3,5 @@
 #define PORT 9977
 #define MESSAGE_LEN 1024
 #define SEND_NAME_PREFIX "SEND_NAME_PREFIX"
+#define SAY_TO "SayTo"
+#define ALL_USER "AllUser"

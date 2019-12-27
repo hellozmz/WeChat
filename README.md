@@ -16,11 +16,13 @@
 
 * client端：
   * 管理员
-    * 可以查看当前在线的所有用户(todo)
     * 屏蔽指定用户发言(todo)
   * 普通用户
-    * 支持client起名字(todo)
-    * 支持与特定的client聊天(todo)
+    * 支持client起名字
+    * 可以查看当前的所有用户和群组(todo)，格式：`AllUser`
+    * 创建群组(todo)，格式：`CreateGroup ${group name} ${userid list}`，创建成功会返回一串数字`${group ID}`，标识该群组
+    * 支持与特定的client聊天，或者多个用户(todo)
+      * 客户端指定目标名称，格式：`SayTo ${group name} ${msg}`，和多个用户之间聊天时，用户列表使用英文逗号分割，用户列表两端使用空格间隔开SayTo关键字和后面的发送信息
 
 ## 可扩展功能
 
@@ -56,7 +58,9 @@
 * 运行镜像
 
 `docker start wechat:test`
+
 `docker run -it wechat:test /bin/bash`
+
 `docker exec -it {ID} /bin/bash`
 
 ## 开发进度

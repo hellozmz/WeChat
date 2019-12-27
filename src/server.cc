@@ -19,8 +19,6 @@
 #include "config/config.h"
 #include "util/glog_util.h"
 
-#include "glog/logging.h"
-
 using std::cin;
 using std::cout;
 using std::endl;
@@ -83,7 +81,7 @@ void RecvData(std::list<int>& socket_list, std::string& data) {
     }
 }
 
-// send 所有的用户都发送数据
+// send 向所有的用户都发送数据
 void SendData(std::list<int>& socket_list, std::string& data) {
     while(true) {
         char buf[MESSAGE_LEN];
@@ -101,6 +99,7 @@ void Server(std::list<int>& socket_list) {
     std::map<int, std::string> user_db;      // 用户数据库
     struct timeval timeout;
     while(true) {
+        // 在for循环内部，select会监听所有用户的发言，并发送给其他的用户
         for (auto i : socket_list) {
             fd_set rfds;        // select监听的IO多路复用的数据空间
             FD_ZERO(&rfds);
@@ -133,45 +132,36 @@ void Server(std::list<int>& socket_list) {
                          << ", message=" << recv_msg;
                 }
                 std::string recv_msg_str(recv_msg);
-                std::string name_prefix(SEND_NAME_PREFIX);
+                const std::string name_prefix(SEND_NAME_PREFIX);
+                const std::string say_to_client_prefix(SAY_TO);
+                const std::string all_user(ALL_USER);
                 cout << "recv_msg=" << recv_msg_str << endl;
-                if (recv_msg_str.size() > name_prefix.size()) {
-                    bool is_name = false;
-                    // for (int i=0; i<name_prefix.size(); ++i) {
-                    //     if (recv_msg_str[i] == name_prefix[i]) {
-                    //         is_name = true;
-                    //         continue;
-                    //     } else {
-                    //         is_name = false;
-                    //         break;
-                    //     }
-                    // }
-                    if (boost::starts_with(recv_msg_str, name_prefix)) {
-                        is_name = true;
-                    } else {
-                        is_name = false;
+                auto send_socket_list = socket_list;
+
+                // 下面是各个功能
+                if (boost::starts_with(recv_msg_str, name_prefix)) {
+                    // 接受用户注册名字
+                    LOG(ERROR) << "origin name=" << recv_msg_str;
+                    std::string name = recv_msg_str.substr(name_prefix.size());
+                    LOG(ERROR) << "name=" << name;
+                    cout << "name=" << name << endl;
+                    if (user_db.find(i) == user_db.end()) {
+                        user_db.insert(std::pair<int, std::string>(i, name));
                     }
-                    cout << std::boolalpha << "is_name=" << is_name << endl;
-                    if (is_name) {
-                        LOG(ERROR) << "origin name=" << recv_msg_str;
-                        std::string name = recv_msg_str.substr(name_prefix.size());
-                        LOG(ERROR) << "name=" << name;
-                        cout << "name=" << name << endl;
-                        if (user_db.find(i) != user_db.end()) {
-                            // find user
-                        } else {
-                            user_db.insert(std::pair<int, std::string>(i, name));
+                } else if (boost::starts_with(recv_msg_str, all_user)) {
+                    // TODO 查询所有用户
+                } else if (boost::starts_with(recv_msg_str, say_to_client_prefix)) {
+                    // TODO 和指定的用户说话
+                } else {
+                    // 默认功能，和其他用户聊天
+                    for(auto j : send_socket_list){
+                        std::string name = user_db[i];
+                        if (i != j) {
+                            strcpy(send_msg, ("user " + name + ": " + std::string(recv_msg)).c_str());
+                            send(j, send_msg, MESSAGE_LEN, 0);
                         }
                     }
-                }
-
-                for(auto j : socket_list){
-                    std::string name = user_db[i];
-                    if (i != j) {
-                        strcpy(send_msg, ("user " + name + ": " + std::string(recv_msg)).c_str());
-                        send(j, send_msg, MESSAGE_LEN, 0);
-                    }
-                }
+                }  // 所有功能执行完毕
             }
         }
         // std::this_thread::sleep_for(std::chrono::milliseconds(1000));

@@ -111,17 +111,6 @@ void User::JoinChatRoom() {
 
             // recv, 获取socket标记
             if (FD_ISSET(fd, &rfds)) {
-                // if (firsttime_signin) {
-                //     char buf[MESSAGE_LEN];
-                //     // 第一次登陆，将名字发送给server
-                //     SendName(buf, MESSAGE_LEN);
-                //     std::string name(buf);
-                //     cout << "send name = " << name << endl;
-                //     firsttime_signin = false;
-                //     send(fd, buf, strlen(buf), 0);
-                //     memset(buf, 0, MESSAGE_LEN);
-                // }
-
                 char buf[MESSAGE_LEN];
                 int len = recv(fd, buf, MESSAGE_LEN, 0);
                 if (len == 0) {
