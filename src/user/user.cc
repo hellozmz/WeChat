@@ -1,5 +1,7 @@
 #include "user.h"
 
+#include <boost/algorithm/string.hpp>
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -63,7 +65,7 @@ void User::JoinChatRoom() {
     }
     LOG(ERROR) << "connect successful.";
 
-    // 第一次接入后，发送名字
+    // 第一次连接server后，发送名字
     {
         char tmp_buf[MESSAGE_LEN];
         SendName(tmp_buf, MESSAGE_LEN);
@@ -78,6 +80,7 @@ void User::JoinChatRoom() {
     int maxfd = 0;
     struct timeval tv;
     int retry_time = 3;
+    std::string close_user(CLOSE_USER);
 
     while(true) {
         FD_ZERO(&rfds);
@@ -91,7 +94,7 @@ void User::JoinChatRoom() {
         tv.tv_sec = 5;
         tv.tv_usec = 0;
 
-        int rtn = select(maxfd+1, &rfds, NULL, NULL, &tv);
+        int rtn = select(maxfd+1, &rfds, NULL, NULL, /*等待时间*/ /*&tv*/ NULL);
 
         if (rtn < 0) {
             LOG(ERROR) << "select error, error code=" << rtn;
@@ -101,14 +104,6 @@ void User::JoinChatRoom() {
             // LOG(ERROR) << "client wait overtime.";
             continue;
         } else {
-            // send, 并删除socket标记
-            if (FD_ISSET(0, &rfds)) {
-                char buf[MESSAGE_LEN];
-                fgets(buf, MESSAGE_LEN, stdin);
-                send(fd, buf, strlen(buf), 0);
-                memset(buf, 0, MESSAGE_LEN);
-            }
-
             // recv, 获取socket标记
             if (FD_ISSET(fd, &rfds)) {
                 char buf[MESSAGE_LEN];
@@ -122,6 +117,18 @@ void User::JoinChatRoom() {
                     }
                 }
                 cout << buf;
+                memset(buf, 0, MESSAGE_LEN);
+            }
+
+            // send, 并删除socket标记
+            if (FD_ISSET(0, &rfds)) {
+                char buf[MESSAGE_LEN];
+                fgets(buf, MESSAGE_LEN, stdin);
+                std::string get_msg(buf);
+                if (boost::starts_with(get_msg, close_user)) {
+                    break;
+                }
+                send(fd, buf, strlen(buf), 0);
                 memset(buf, 0, MESSAGE_LEN);
             }
         }

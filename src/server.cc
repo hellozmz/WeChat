@@ -3,8 +3,9 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <sys/socket.h>
 #include <stdarg.h>
+// #include <sys/prctl.h>   /*只在Linux下可以使用*/
+#include <sys/socket.h>
 #include <sys/stat.h>
 
 #include <chrono>
@@ -35,6 +36,7 @@ struct UserDB {
 // 监听注册的client socket
 void AcceptSocket(int skt, struct sockaddr_in s_addr, socklen_t saddr_len,
                   std::list<int>& socket_list) {
+    // prctl(PR_SET_NAME, "WeChatAcceptSocket");
     while(true) {
         int fd = accept(skt, (sockaddr*)&s_addr, &saddr_len);
         cout << fd << " is linked." << endl;
@@ -110,9 +112,9 @@ void Server(std::list<int>& socket_list) {
             }
             // select调用完后，timeout的值可能被修改，是一个不确定的值，所以cpu可能飙升到100%
             // 所以需要在while循环内部每次都赋值一遍
-            timeout.tv_sec = 2;
+            timeout.tv_sec = 1;
             timeout.tv_usec = 0;
-            int rtn = select(maxfd+1, &rfds, NULL, NULL, &timeout);
+            int rtn = select(maxfd+1, &rfds, NULL, NULL,  /*等待时间*/ &timeout);
             if (rtn < 0) {
                 LOG(ERROR) << "select error.";
                 cout << "select error." << endl;
@@ -135,33 +137,56 @@ void Server(std::list<int>& socket_list) {
                 const std::string name_prefix(SEND_NAME_PREFIX);
                 const std::string say_to_client_prefix(SAY_TO);
                 const std::string all_user(ALL_USER);
-                cout << "recv_msg=" << recv_msg_str << endl;
                 auto send_socket_list = socket_list;
 
-                // 下面是各个功能
-                if (boost::starts_with(recv_msg_str, name_prefix)) {
-                    // 接受用户注册名字
-                    LOG(ERROR) << "origin name=" << recv_msg_str;
-                    std::string name = recv_msg_str.substr(name_prefix.size());
-                    LOG(ERROR) << "name=" << name;
-                    cout << "name=" << name << endl;
-                    if (user_db.find(i) == user_db.end()) {
-                        user_db.insert(std::pair<int, std::string>(i, name));
-                    }
-                } else if (boost::starts_with(recv_msg_str, all_user)) {
-                    // TODO 查询所有用户
-                } else if (boost::starts_with(recv_msg_str, say_to_client_prefix)) {
-                    // TODO 和指定的用户说话
+                if (len < 0) {
+                    // 连接出错
+                    continue;
+                } else if (len == 0) {
+                    // 连接关闭
+                    cout << "用户" << user_db[i] << "下线了" << endl;
+                    user_db.erase(i);
+                    close(i);
+                    // it正常情况下是一个list，但是本环境下，it只会有一个元素，所以不需要for循环了
+                    auto it = std::find(socket_list.begin(), socket_list.end(), i);
+                    if (it != socket_list.end())
+                        socket_list.erase(it);
                 } else {
-                    // 默认功能，和其他用户聊天
-                    for(auto j : send_socket_list){
-                        std::string name = user_db[i];
-                        if (i != j) {
-                            strcpy(send_msg, ("user " + name + ": " + std::string(recv_msg)).c_str());
-                            send(j, send_msg, MESSAGE_LEN, 0);
+                    // 下面是各个功能
+                    if (boost::starts_with(recv_msg_str, name_prefix)) {
+                        // 接受用户注册名字
+                        LOG(ERROR) << "origin name=" << recv_msg_str;
+                        std::string name = recv_msg_str.substr(name_prefix.size());
+                        LOG(ERROR) << "name=" << name;
+                        cout << "name=" << name << endl;
+                        if (user_db.find(i) == user_db.end()) {
+                            user_db.insert(std::pair<int, std::string>(i, name));
                         }
-                    }
-                }  // 所有功能执行完毕
+                    } else if (boost::starts_with(recv_msg_str, all_user)) {
+                        // TODO 查询所有用户
+                        std::string all_user_str;
+                        for (auto user : user_db) {
+                            all_user_str += user.second;
+                            all_user_str += " ";
+                        }
+                        cout << all_user << ": " << all_user_str << endl;
+                        strcpy(send_msg, all_user_str.c_str());
+                        send(i, send_msg, MESSAGE_LEN, 0);
+                    } else if (boost::starts_with(recv_msg_str, say_to_client_prefix)) {
+                        // TODO 和指定的用户说话
+                    } else {
+                        // 默认功能，和其他用户聊天
+                        for(auto j : send_socket_list){
+                            std::string name = user_db[i];
+                            if (i != j) {
+                                strcpy(send_msg, ("user " + name + ": " + std::string(recv_msg)).c_str());
+                                send(j, send_msg, MESSAGE_LEN, 0);
+                            }
+                        }
+                    }  // 所有功能执行完毕
+
+                    cout << "user " << user_db[i] <<" says: " << recv_msg_str << endl;
+                }
             }
         }
         // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
