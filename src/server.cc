@@ -169,6 +169,7 @@ void Server(std::list<int>& socket_list) {
                             all_user_str += user.second;
                             all_user_str += " ";
                         }
+                        all_user_str += '\n';
                         cout << all_user << ": " << all_user_str << endl;
                         strcpy(send_msg, all_user_str.c_str());
                         send(i, send_msg, MESSAGE_LEN, 0);

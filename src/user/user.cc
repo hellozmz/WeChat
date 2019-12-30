@@ -116,7 +116,7 @@ void User::JoinChatRoom() {
                         break;
                     }
                 }
-                cout << buf;
+                cout << buf << std::flush;
                 memset(buf, 0, MESSAGE_LEN);
             }
 
