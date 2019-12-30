@@ -16,11 +16,13 @@
 
 * client端：
   * 管理员
-    * 可以查看当前在线的所有用户(todo)
     * 屏蔽指定用户发言(todo)
   * 普通用户
-    * 支持client起名字(todo)
-    * 支持与特定的client聊天(todo)
+    * 支持client起名字
+    * 可以查看当前的所有用户和群组(todo)，格式：`AllUser`
+    * 创建群组(todo)，格式：`CreateGroup ${group name} ${userid list}`，创建成功会返回一串数字`${group ID}`，标识该群组
+    * 支持与特定的client聊天，或者多个用户(todo)
+      * 客户端指定目标名称，格式：`SayTo ${group name} ${msg}`，和多个用户之间聊天时，用户列表使用英文逗号分割，用户列表两端使用空格间隔开SayTo关键字和后面的发送信息
 
 ## 可扩展功能
 
@@ -29,6 +31,7 @@
 * 完善的启动脚本
 * 聊天记录存储在数据库中(todo)
 * 系统封装成docker image
+* 为了便于编译，将bazel cache打包到docker image里
 
 ## 技术栈
 
@@ -43,6 +46,8 @@
 * Centos 7
 * bazel 0.17.2
 * g++ 4.8.5
+* git 2.2.1
+* boost 1.68.0
 
 ## docker常用命令
 
@@ -53,7 +58,9 @@
 * 运行镜像
 
 `docker start wechat:test`
+
 `docker run -it wechat:test /bin/bash`
+
 `docker exec -it {ID} /bin/bash`
 
 ## 开发进度
@@ -63,5 +70,5 @@ Time | 工作内容 | 备注
 2019/12/08 | 做计划 | 添加成员 @95xueqian
 2019/12/15 | 开发出聊天的demo | 原型demo开发完毕<br>客户端发送名字给服务器，服务器记录名字的功能未实现
 2019/12/22 | 完善功能 | 支持glog,gtest,docker 大量todo待完成
-2019/12/29 | 测试验收 | -
+2019/12/29 | 测试验收 | 支持用户添加名字，查询所有用户，退出客户端，修复部分bug，支持boost库
 2019/12/31 | 完善代码，添加测试用例 | -
