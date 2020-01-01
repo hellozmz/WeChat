@@ -49,19 +49,13 @@
 * git 2.2.1
 * boost 1.68.0
 
-## docker常用命令
+## Docker常用命令
 
-* 制作镜像
-
-`docker build -t wechat:test .`
-
-* 运行镜像
-
-`docker start wechat:test`
-
-`docker run -it wechat:test /bin/bash`
-
-`docker exec -it {ID} /bin/bash`
+* 制作镜像 `docker build -t wechat:${tag} .`
+* 运行容器 `docker run -it wechat:test /bin/bash`
+* 已有容器，交互式运行该容器 `docker exec -it ${container ID} /bin/bash`
+* 容器停止运行后，重新启动 `docker start ${container ID}`
+* 停止运行容器 `docker stop ${container ID}`
 
 ## 开发进度
 
